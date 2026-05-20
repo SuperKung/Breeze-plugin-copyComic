@@ -1499,10 +1499,11 @@ async function getReadSnapshot(payload: ReadSnapshotPayload = {}) {
   const imageUrls = sortChapterImageUrls(chapterContent.contents, chapterContent.words);
   const pages = imageUrls.map((imageUrl, index) => {
     const name = extractImageName(imageUrl, index);
+    const id = `${chapterId}-${index + 1}`;
     return {
-      id: `${chapterId}-${index + 1}`,
+      id,
       name,
-      path: `comic/${comicId}/${chapterId}/${name}`,
+      path: `comic/${comicId}/${id}/${name}`,
       url: imageUrl,
       extern: {
         index: index + 1,
