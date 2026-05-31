@@ -1,4 +1,5 @@
 import { PLUGIN_ID } from "./config";
+import type { ActionItem, MetadataListItem } from "../types/type";
 
 export const NOT_FOUND_IMAGE_URL = "";
 export const PLACEHOLDER_IMAGE_PATH = "placeholder/image-404.png";
@@ -59,12 +60,19 @@ export function createMetadataActionList(
   };
 }
 
-export function createBasicMetadata(type: string, name: string, values: unknown) {
+export function createBasicMetadata(
+  type: string,
+  name: string,
+  values: unknown,
+): MetadataListItem {
   const list = Array.isArray(values) ? values : values == null ? [] : [values];
   return {
     type,
     name,
-    value: list.map((item) => String(item ?? "").trim()).filter(Boolean),
+    value: list
+      .map((item) => String(item ?? "").trim())
+      .filter(Boolean)
+      .map((item) => ({ name: item, onTap: {}, extern: {} }) as ActionItem),
   };
 }
 
@@ -151,35 +159,5 @@ type PlainField = BaseField & {
 
 type SettingsField = OptionField | PlainField;
 
-export type SettingsBundleContract = {
-  source: string;
-  scheme: {
-    version: "1.0.0";
-    type: "settings";
-    sections: Array<{
-      id: string;
-      title: string;
-      fields: SettingsField[];
-    }>;
-  };
-  data: {
-    canShowUserInfo: boolean;
-    values: Record<string, unknown>;
-  };
-};
-
-type CapabilityAction = {
-  key?: string;
-  title: string;
-  fnPath: string;
-};
-
-export type CapabilitiesBundleContract = {
-  source: string;
-  scheme: {
-    version: "1.0.0";
-    type: "capabilities";
-    actions: CapabilityAction[];
-  };
-  data: Record<string, unknown>;
-};
+import type { SettingsBundleContract } from "../types/type";
+export type { SettingsBundleContract };

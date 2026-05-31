@@ -51,6 +51,19 @@ import type {
   SearchApiData,
   SearchPayload,
 } from "./types";
+import type {
+  CapabilitiesBundleContract,
+  ChapterContentContract,
+  ChapterPage,
+  ChapterSummary,
+  ChapterWithPages,
+  ComicDetailContract,
+  ComicPagedListContract,
+  FilterBundleContract,
+  ReadSnapshotContract,
+  SearchResultContract,
+  StringMap,
+} from "../types/type";
 
 const API_DOMAIN_CONFIG_KEY = "api.domain";
 const API_BASE_CACHE_KEY = "copyComic:apiBase:v1";
@@ -341,7 +354,7 @@ function buildExternSearchUrl(params: Record<string, string>) {
   return `https://api.copy2000.online/api/v3/comics?${search.toString()}`;
 }
 
-async function getInfo() {
+async function getInfo(): Promise<ReturnType<typeof buildPluginInfo>> {
   return buildPluginInfo();
 }
 
@@ -607,7 +620,18 @@ async function writeChapterCache(cacheKey: string, eps: MappedEpItem[]) {
   try {
     await cache.set(cacheKey, {
       ts: Date.now(),
-      eps,
+      eps: eps.map(
+        (ep) =>
+          ({
+            id: ep.id,
+            requestId: "",
+            logicalKey: "",
+            storageChapterId: "",
+            name: ep.name,
+            order: ep.order,
+            extern: ep.extern,
+          }) as ChapterSummary,
+      ),
     });
   } catch {
     // ignore cache write errors
@@ -879,7 +903,7 @@ function mapRankBookToComic(book: { [key: string]: unknown }) {
   } as SearchApiComic;
 }
 
-async function getHomeRecommend(payload: RecommendPayload = {}) {
+async function getHomeRecommend(payload: RecommendPayload = {}): Promise<ComicPagedListContract> {
   const apiBase = await resolveApiBase();
   const page = Math.max(1, Number(payload.page ?? 1) || 1);
   const offset = (page - 1) * HOME_PAGE_SIZE;
@@ -912,13 +936,11 @@ async function getHomeRecommend(payload: RecommendPayload = {}) {
       source: PLUGIN_ID,
       list: "comicGrid",
     },
-    data: { paging, items },
-    paging,
-    items,
+    data: { hasReachedMax: paging.hasReachedMax, items },
   };
 }
 
-async function getHomeNewest(payload: NewestPayload = {}) {
+async function getHomeNewest(payload: NewestPayload = {}): Promise<ComicPagedListContract> {
   const apiBase = await resolveApiBase();
   const page = Math.max(1, Number(payload.page ?? 1) || 1);
   const offset = (page - 1) * HOME_PAGE_SIZE;
@@ -972,13 +994,11 @@ async function getHomeNewest(payload: NewestPayload = {}) {
       source: PLUGIN_ID,
       list: "comicGrid",
     },
-    data: { paging, items },
-    paging,
-    items,
+    data: { hasReachedMax: paging.hasReachedMax, items },
   };
 }
 
-async function getHomeRank(payload: RankPayload = {}) {
+async function getHomeRank(payload: RankPayload = {}): Promise<ComicPagedListContract> {
   const apiBase = await resolveApiBase();
   const extern = toStringMap(payload.extern);
   const page = Math.max(1, Number(payload.page ?? 1) || 1);
@@ -1053,13 +1073,13 @@ async function getHomeRank(payload: RankPayload = {}) {
       source: PLUGIN_ID,
       list: "comicGrid",
     },
-    data: { paging, items },
-    paging,
-    items,
+    data: { hasReachedMax: paging.hasReachedMax, items },
   };
 }
 
-async function getHomeRankFilterBundle(payload: { extern?: Record<string, unknown> } = {}) {
+async function getHomeRankFilterBundle(
+  payload: { extern?: Record<string, unknown> } = {},
+): Promise<FilterBundleContract> {
   const extern = toStringMap(payload.extern);
   return {
     source: PLUGIN_ID,
@@ -1110,7 +1130,7 @@ async function getHomeRankFilterBundle(payload: { extern?: Record<string, unknow
   };
 }
 
-async function getHomeDiscover(payload: RecommendPayload = {}) {
+async function getHomeDiscover(payload: RecommendPayload = {}): Promise<ComicPagedListContract> {
   const apiBase = await resolveApiBase();
   const extern = toStringMap(payload.extern);
   const page = Math.max(1, Number(payload.page ?? 1) || 1);
@@ -1149,13 +1169,13 @@ async function getHomeDiscover(payload: RecommendPayload = {}) {
       source: PLUGIN_ID,
       list: "comicGrid",
     },
-    data: { paging, items },
-    paging,
-    items,
+    data: { hasReachedMax: paging.hasReachedMax, items },
   };
 }
 
-async function getHomeDiscoverFilterBundle(payload: { extern?: Record<string, unknown> } = {}) {
+async function getHomeDiscoverFilterBundle(
+  payload: { extern?: Record<string, unknown> } = {},
+): Promise<FilterBundleContract> {
   const extern = toStringMap(payload.extern);
   return {
     source: PLUGIN_ID,
@@ -1206,7 +1226,7 @@ async function getHomeDiscoverFilterBundle(payload: { extern?: Record<string, un
   };
 }
 
-async function getCapabilities() {
+async function getCapabilities(): Promise<CapabilitiesBundleContract> {
   return {
     source: PLUGIN_ID,
     scheme: {
@@ -1223,7 +1243,7 @@ async function getCapabilities() {
   };
 }
 
-async function searchComic(payload: SearchPayload = {}) {
+async function searchComic(payload: SearchPayload = {}): Promise<SearchResultContract> {
   const apiBase = await resolveApiBase();
   const extern = toStringMap(payload.extern);
   const page = Math.max(1, Number(payload.page ?? 1) || 1);
@@ -1302,7 +1322,7 @@ async function searchComic(payload: SearchPayload = {}) {
   };
 }
 
-async function getComicDetail(payload: ComicDetailPayload = {}) {
+async function getComicDetail(payload: ComicDetailPayload = {}): Promise<ComicDetailContract> {
   const apiBase = await resolveApiBase();
   const comicId = String(payload.comicId ?? "").trim();
   if (!comicId) {
@@ -1422,7 +1442,18 @@ async function getComicDetail(payload: ComicDetailPayload = {}) {
       }),
       extern: {},
     },
-    eps,
+    eps: eps.map(
+      (ep) =>
+        ({
+          id: ep.id,
+          requestId: "",
+          logicalKey: "",
+          storageChapterId: "",
+          name: ep.name,
+          order: ep.order,
+          extern: ep.extern,
+        }) as ChapterSummary,
+    ),
     recommend: [],
     totalViews: popular,
     totalLikes: popular,
@@ -1437,8 +1468,8 @@ async function getComicDetail(payload: ComicDetailPayload = {}) {
   };
 
   const scheme = {
-    version: "1.0.0",
-    type: "comicDetail",
+    version: "1.0.0" as const,
+    type: "comicDetail" as const,
     source: PLUGIN_ID,
   };
 
@@ -1459,7 +1490,7 @@ async function getComicDetail(payload: ComicDetailPayload = {}) {
   };
 }
 
-async function getReadSnapshot(payload: ReadSnapshotPayload = {}) {
+async function getReadSnapshot(payload: ReadSnapshotPayload = {}): Promise<ReadSnapshotContract> {
   const comicId = String(payload.comicId ?? "").trim();
   if (!comicId) {
     throw new Error("comicId 不能为空");
@@ -1537,25 +1568,13 @@ async function getReadSnapshot(payload: ReadSnapshotPayload = {}) {
         id: String(comicInfo.id ?? comicId),
         source: PLUGIN_ID,
         title: String(comicInfo.title ?? ""),
-        description: String(comicInfo.description ?? ""),
-        cover: {
-          ...toStringMap(comicInfo.cover),
-          extern: toStringMap(toStringMap(comicInfo.cover).extern),
-        },
-        creator: {
-          ...toStringMap(comicInfo.creator),
-          avatar: {
-            ...toStringMap(toStringMap(comicInfo.creator).avatar),
-            extern: toStringMap(toStringMap(toStringMap(comicInfo.creator).avatar).extern),
-          },
-          extern: toStringMap(toStringMap(comicInfo.creator).extern),
-        },
-        titleMeta: Array.isArray(comicInfo.titleMeta) ? comicInfo.titleMeta : [],
-        metadata: Array.isArray(comicInfo.metadata) ? comicInfo.metadata : [],
         extern: toStringMap(comicInfo.extern),
       },
       chapter: {
         id: chapterId,
+        requestId: "",
+        logicalKey: "",
+        storageChapterId: "",
         name: chapterContent.name || targetChapter.name || `章节 ${chapterId}`,
         order: targetChapter.order,
         pages,
@@ -1566,7 +1585,7 @@ async function getReadSnapshot(payload: ReadSnapshotPayload = {}) {
   };
 }
 
-async function getChapter(payload: ChapterPayload = {}) {
+async function getChapter(payload: ChapterPayload = {}): Promise<ChapterContentContract> {
   const extern = toStringMap(payload.extern);
   const comicId = String(payload.comicId ?? extern.comicId ?? "").trim();
   const inputChapterId = String(payload.chapterId ?? extern.chapterId ?? "").trim();
@@ -1596,40 +1615,84 @@ async function getChapter(payload: ChapterPayload = {}) {
 
   const cached = await readGetChapterCache(comicId, chapterId);
   if (cached) {
+    const cc = cached.chapter as Record<string, unknown>;
+    const cachedChapter: ChapterWithPages = {
+      id: (cc["id"] ?? cc["epId"] ?? "").toString(),
+      requestId: (cc["requestId"] ?? "").toString(),
+      logicalKey: (cc["logicalKey"] ?? "").toString(),
+      storageChapterId: (cc["storageChapterId"] ?? "").toString(),
+      name: (cc["name"] ?? cc["epName"] ?? "").toString(),
+      order: Number(cc["order"] ?? 0),
+      pages: (Array.isArray(cc["pages"])
+        ? cc["pages"]
+        : Array.isArray(cc["docs"])
+          ? cc["docs"]
+          : []) as ChapterPage[],
+      extern: (cc["extern"] ?? {}) as StringMap,
+    };
+
     return {
       source: PLUGIN_ID,
       comicId,
       chapterId,
       extern: payload.extern ?? null,
       scheme: {
-        version: "1.0.0",
-        type: "chapterContent",
+        version: "1.0.0" as const,
+        type: "chapterContent" as const,
         source: PLUGIN_ID,
       },
       data: {
-        chapter: cached.chapter,
+        comic: {
+          id: comicId,
+          source: PLUGIN_ID,
+          title: (cc["name"] ?? cc["epName"] ?? "").toString(),
+          extern: {},
+        },
+        chapter: cachedChapter,
+        chapters: [],
       },
-      chapter: cached.chapter,
     };
   }
 
   return limitGetChapter(async () => {
     const recheckCached = await readGetChapterCache(comicId, chapterId);
     if (recheckCached) {
+      const rcc = recheckCached.chapter as Record<string, unknown>;
+      const recheckChapter: ChapterWithPages = {
+        id: (rcc["id"] ?? rcc["epId"] ?? "").toString(),
+        requestId: (rcc["requestId"] ?? "").toString(),
+        logicalKey: (rcc["logicalKey"] ?? "").toString(),
+        storageChapterId: (rcc["storageChapterId"] ?? "").toString(),
+        name: (rcc["name"] ?? rcc["epName"] ?? "").toString(),
+        order: Number(rcc["order"] ?? 0),
+        pages: (Array.isArray(rcc["pages"])
+          ? rcc["pages"]
+          : Array.isArray(rcc["docs"])
+            ? rcc["docs"]
+            : []) as ChapterPage[],
+        extern: (rcc["extern"] ?? {}) as StringMap,
+      };
+
       return {
         source: PLUGIN_ID,
         comicId,
         chapterId,
         extern: payload.extern ?? null,
         scheme: {
-          version: "1.0.0",
-          type: "chapterContent",
+          version: "1.0.0" as const,
+          type: "chapterContent" as const,
           source: PLUGIN_ID,
         },
         data: {
-          chapter: recheckCached.chapter,
+          comic: {
+            id: comicId,
+            source: PLUGIN_ID,
+            title: (rcc["name"] ?? rcc["epName"] ?? "").toString(),
+            extern: {},
+          },
+          chapter: recheckChapter,
+          chapters: [],
         },
-        chapter: recheckCached.chapter,
       };
     }
 
@@ -1663,22 +1726,14 @@ async function getChapter(payload: ChapterPayload = {}) {
     }
 
     const chapter = {
-      epId: chapterId,
-      epName: chapterContent.name || targetChapter.name || `章节 ${chapterId}`,
-      length: docs.length,
-      epPages: String(docs.length),
-      docs,
-      series: eps.map((item) => ({
-        id: item.id,
-        name: item.name || `章节 ${item.id}`,
-        order: item.order,
-        extern: {
-          ...item.extern,
-          comicId,
-          chapterId: item.id,
-          order: item.order,
-        },
-      })),
+      id: chapterId,
+      requestId: "",
+      logicalKey: "",
+      storageChapterId: "",
+      name: chapterContent.name || targetChapter.name || `章节 ${chapterId}`,
+      order: targetChapter.order,
+      pages: docs,
+      extern: targetChapter.extern,
     };
 
     await writeGetChapterCache(comicId, chapterId, chapter);
@@ -1694,9 +1749,23 @@ async function getChapter(payload: ChapterPayload = {}) {
         source: PLUGIN_ID,
       },
       data: {
+        comic: {
+          id: comicId,
+          source: PLUGIN_ID,
+          title: chapter.name,
+          extern: {},
+        },
         chapter,
+        chapters: eps.map((item) => ({
+          id: item.id,
+          requestId: "",
+          logicalKey: "",
+          storageChapterId: "",
+          name: item.name || `章节 ${item.id}`,
+          order: item.order,
+          extern: { ...item.extern, comicId, chapterId: item.id, order: item.order },
+        })),
       },
-      chapter,
     };
   });
 }
@@ -1706,7 +1775,7 @@ async function fetchImageBytes({
   timeoutMs = 30000,
   taskGroupKey = "",
   extern = {},
-}: FetchImagePayload = {}) {
+}: FetchImagePayload = {}): Promise<Uint8Array<ArrayBufferLike>> {
   const targetUrl = String(url).trim();
   if (!targetUrl) {
     throw new Error("url 不能为空");
@@ -1843,6 +1912,18 @@ async function saveSettings(payload: { values?: Record<string, unknown> } = {}) 
   return { ok: true };
 }
 
+export async function getCapabilitiesBundle(): Promise<CapabilitiesBundleContract> {
+  return {
+    source: PLUGIN_ID,
+    scheme: {
+      version: "1.0.0" as const,
+      type: "capabilities" as const,
+      actions: [],
+    },
+    data: {},
+  };
+}
+
 export default {
   getInfo,
   getCapabilities,
@@ -1859,4 +1940,5 @@ export default {
   fetchImageBytes,
   getSettingsBundle,
   saveSettings,
+  getCapabilitiesBundle,
 };
