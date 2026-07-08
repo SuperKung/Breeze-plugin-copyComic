@@ -1,3 +1,17 @@
+import type {
+  CapabilitiesBundleContract,
+  ChapterContentContract,
+  ChapterPage,
+  ChapterSummary,
+  ChapterWithPages,
+  ComicDetailContract,
+  ComicPagedListContract,
+  FilterBundleContract,
+  ReadSnapshotContract,
+  SearchResultContract,
+  StringMap,
+} from "breeze-plugin-kit";
+import { cache, pluginConfig, runtime } from "breeze-plugin-kit";
 import ky from "ky";
 import {
   NOT_FOUND_IMAGE_URL,
@@ -23,7 +37,6 @@ import {
 } from "./config";
 import { buildPluginInfo } from "./get-info";
 import { createFetchImageDualLimiter, createRateLimiter } from "./limiter";
-import { cache, pluginConfig, runtime } from "./tools";
 import type {
   CachedChapterContent,
   CachedGetChapterResult,
@@ -51,19 +64,6 @@ import type {
   SearchApiData,
   SearchPayload,
 } from "./types";
-import type {
-  CapabilitiesBundleContract,
-  ChapterContentContract,
-  ChapterPage,
-  ChapterSummary,
-  ChapterWithPages,
-  ComicDetailContract,
-  ComicPagedListContract,
-  FilterBundleContract,
-  ReadSnapshotContract,
-  SearchResultContract,
-  StringMap,
-} from "../types/type";
 
 const API_DOMAIN_CONFIG_KEY = "api.domain";
 const API_BASE_CACHE_KEY = "copyComic:apiBase:v1";

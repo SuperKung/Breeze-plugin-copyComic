@@ -1,4 +1,4 @@
-import type { ActionItem, MetadataListItem } from "../types/type";
+import type { ActionItem, MetadataListItem } from "breeze-plugin-kit";
 
 export const NOT_FOUND_IMAGE_URL = "";
 export const PLACEHOLDER_IMAGE_PATH = "placeholder/image-404.png";
@@ -61,5 +61,5 @@ export function createPaging(page = 1, total = 1) {
   };
 }
 
-import type { SettingsBundleContract } from "../types/type";
+import type { SettingsBundleContract } from "breeze-plugin-kit";
 export type { SettingsBundleContract };
