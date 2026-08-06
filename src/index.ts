@@ -69,12 +69,13 @@ const API_DOMAIN_CONFIG_KEY = "api.domain";
 const API_BASE_CACHE_KEY = "copyComic:apiBase:v1";
 const PLATFORM_CONFIG_KEY = "api.platform";
 const PLATFORM_CACHE_KEY = "copyComic:platform:v1";
-const DEFAULT_API_DOMAIN_CHOICE = "热辣漫画线路2";
+const DEFAULT_API_DOMAIN_CHOICE = "国际服2";
 const DEFAULT_PLATFORM_VALUE = "1";
 const HOME_PAGE_SIZE = 18;
 const API_DOMAIN_OPTIONS: Array<{ label: string; value: string }> = [
   { label: "国际服", value: "国际服" },
   { label: "国际服1", value: "国际服1" },
+  { label: "国际服2", value: "国际服2" },
   { label: "大陆专线1", value: "大陆专线1" },
   { label: "大陆专线2", value: "大陆专线2" },
   { label: "大陆专线3", value: "大陆专线3" },
@@ -194,6 +195,7 @@ const DISCOVER_ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
 const API_DOMAIN_BASE_MAP: Record<string, string> = {
   国际服: "https://api.mangacopy.com/api/v3",
   国际服1: "https://api.copy2000.online/api/v3",
+  国际服2: "https://api.copy3000.com/api/v3",
   大陆专线1: "https://mapi.copy20.com/api/v3",
   大陆专线2: "https://mapi.copy2000.site/api/v3",
   大陆专线3: "https://api.2025copy.com/api/v3",
