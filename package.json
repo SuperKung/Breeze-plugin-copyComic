@@ -2,7 +2,7 @@
   "name": "breeze-plugin-copy-comic",
   "version": "0.0.9",
   "type": "module",
-  "packageManager": "pnpm@10.27.0",
+  "packageManager": "pnpm@11.8.0",
   "files": [
     "dist"
   ],
@@ -18,20 +18,22 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@rspack/cli": "^2.0.5",
-    "@rspack/core": "^2.0.5",
-    "@types/node": "^25.9.1",
+    "@rspack/cli": "^2.1.8",
+    "@rspack/core": "^2.1.8",
+    "@types/node": "^26.1.2",
+    "cheerio": "^1.2.0",
     "cross-env": "^10.1.0",
-    "eslint": "^10.4.1",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.6.0",
+    "globals": "^17.9.0",
     "ky": "^2.0.2",
-    "prettier": "^3.8.3",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0"
+    "oxc-parser": "^0.143.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.8",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.66.0"
   },
   "dependencies": {
-    "breeze-plugin-kit": "^0.3.0"
+    "breeze-plugin-kit": "^0.5.0"
   }
 }
