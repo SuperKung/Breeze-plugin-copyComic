@@ -401,6 +401,41 @@ async function getApiHeaders() {
   return headers;
 }
 
+function isAntiPiracyMessage(message: string) {
+  const text = message.toLowerCase();
+  return (
+    text.includes("破解") ||
+    text.includes("正版") ||
+    text.includes("请到官网") ||
+    text.includes("請到官網") ||
+    text.includes("download") ||
+    text.includes("更新最新app")
+  );
+}
+
+const APP_FALLBACK_UA =
+  "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.196 Mobile Safari/537.36 iDOKit/1.0.0 RSSX/1.0.0";
+
+function getAppFallbackHeaders(): Record<string, string> {
+  return {
+    Accept: "application/json",
+    version: "2025.05.09",
+    Origin: "https://2025copy.com",
+    region: "0",
+    webp: "0",
+    platform: "1",
+    "User-Agent": APP_FALLBACK_UA,
+  };
+}
+
+function getAppFallbackHeadersForChapterContent(headers: Record<string, string>) {
+  const fallback = getAppFallbackHeaders();
+  if (headers.authorization) {
+    fallback.authorization = headers.authorization;
+  }
+  return fallback;
+}
+
 function getApiHost(apiBase: string) {
   try {
     return new URL(apiBase).host.toLowerCase();
@@ -447,23 +482,48 @@ function normalizeGroups(value: unknown): DetailApiGroup[] {
 
 async function fetchCopyApi<T>(url: string) {
   console.log(`[api] fetchCopyApi url="${url}"`);
-  const json = (await ky
-    .get(url, {
-      headers: await getApiHeaders(),
-    })
-    .json()) as CopyApiResponse<T>;
-  if (Number(json.code ?? 0) !== 200) {
-    throw new Error(json.message || "请求失败");
+  try {
+    const json = (await ky
+      .get(url, {
+        headers: await getApiHeaders(),
+      })
+      .json()) as CopyApiResponse<T>;
+    console.log(json.message);
+    if (Number(json.code ?? 0) !== 200) {
+      throw new Error(json.message || "请求失败");
+    }
+    return json;
+  } catch (error) {
+    const message = String((error as Error).message ?? "");
+    if (!isAntiPiracyMessage(message)) {
+      throw error;
+    }
+    console.log(`[fallback] anti-piracy detected, retry with app headers: ${message}`);
+    const fallbackHeaders = getAppFallbackHeaders();
+    const json = (await ky
+      .get(url, {
+        headers: fallbackHeaders,
+      })
+      .json()) as CopyApiResponse<T>;
+    console.log(`[fallback] response code=${json.code} message="${json.message}"`);
+    if (Number(json.code ?? 0) !== 200) {
+      throw new Error(json.message || "请求失败");
+    }
+    return json;
   }
-  return json;
 }
 
 async function fetchCopyApiWithHeaders<T>(url: string, headers: Record<string, string>) {
+  const safeHeaders = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => (k.toLowerCase() === "authorization" ? [k, "***"] : [k, v])),
+  );
+  console.log(`[api] fetchCopyApiWithHeaders url="${url}" headers=${JSON.stringify(safeHeaders)}`);
   const json = (await ky
     .get(url, {
       headers,
     })
     .json()) as CopyApiResponse<T>;
+  console.log(`[api] fetchCopyApiWithHeaders response code=${json.code} message="${json.message}"`);
   if (Number(json.code ?? 0) !== 200) {
     throw new Error(json.message || "请求失败");
   }
@@ -738,27 +798,44 @@ async function getChapterContentWithCache(
     platform: "1",
   });
   const apiBase = await resolveApiBase();
-  const primaryChapterPath = isHotMangaApiBase(apiBase) ? "chapter" : "chapter2";
-  const secondaryChapterPath = primaryChapterPath === "chapter" ? "chapter2" : "chapter";
-  const buildChapterUrl = (chapterPath: string) =>
-    `${apiBase}/comic/${encodeURIComponent(comicId)}/${chapterPath}/${encodeURIComponent(chapterId)}?${chapterParams.toString()}`;
+
+  async function doFetchChapterContent(chapterHeaders: Record<string, string>) {
+    const primaryChapterPath = isHotMangaApiBase(apiBase) ? "chapter" : "chapter2";
+    const secondaryChapterPath = primaryChapterPath === "chapter" ? "chapter2" : "chapter";
+    const buildChapterUrl = (chapterPath: string) =>
+      `${apiBase}/comic/${encodeURIComponent(comicId)}/${chapterPath}/${encodeURIComponent(chapterId)}?${chapterParams.toString()}`;
+
+    let chapterResp: CopyApiResponse<ChapterContentResult>;
+    try {
+      chapterResp = await fetchCopyApiWithHeaders<ChapterContentResult>(
+        buildChapterUrl(primaryChapterPath),
+        chapterHeaders,
+      );
+    } catch (error) {
+      const status = Number((error as { response?: { status?: unknown } })?.response?.status ?? 0);
+      if (status !== 404) {
+        throw error;
+      }
+      chapterResp = await fetchCopyApiWithHeaders<ChapterContentResult>(
+        buildChapterUrl(secondaryChapterPath),
+        chapterHeaders,
+      );
+    }
+    return chapterResp;
+  }
 
   let chapterResp: CopyApiResponse<ChapterContentResult>;
   try {
-    chapterResp = await fetchCopyApiWithHeaders<ChapterContentResult>(
-      buildChapterUrl(primaryChapterPath),
-      headers,
-    );
+    chapterResp = await doFetchChapterContent(headers);
   } catch (error) {
-    const status = Number((error as { response?: { status?: unknown } })?.response?.status ?? 0);
-    if (status !== 404) {
+    const message = String((error as Error).message ?? "");
+    if (!isAntiPiracyMessage(message)) {
       throw error;
     }
-    chapterResp = await fetchCopyApiWithHeaders<ChapterContentResult>(
-      buildChapterUrl(secondaryChapterPath),
-      headers,
-    );
+    console.log(`[fallback] anti-piracy detected, retry with app headers: ${message}`);
+    chapterResp = await doFetchChapterContent(getAppFallbackHeadersForChapterContent(headers));
   }
+
   const chapterNode = toStringMap(chapterResp.results);
   const chapterInfo = toStringMap(chapterNode.chapter) as ChapterContentInfo;
   const contents = (
@@ -798,7 +875,9 @@ async function fetchAllGroupChapters(comicId: string, groups: DetailApiGroup[]) 
       offset: "0",
     });
     const apiUrl = `${apiBase}/comic/${encodeURIComponent(comicId)}/group/${encodeURIComponent(groupPathWord)}/chapters?${params.toString()}`;
+
     const chapterResp = await fetchCopyApi<ChapterApiData>(apiUrl);
+
     const chapterData = toStringMap(chapterResp.results);
     const chapterList = (
       Array.isArray(chapterData.list) ? chapterData.list : []
@@ -1030,8 +1109,7 @@ async function getHomeRank(payload: RankPayload = {}): Promise<ComicPagedListCon
       : (dateMap[dateOption] ?? "day")
   ) as "day" | "week" | "month" | "total";
   const rankType = (Number(payload.rankType) === 5 ? "5" : (typeMap[typeOption] ?? "1")) as
-    | "1"
-    | "5";
+    "1" | "5";
   const params = new URLSearchParams({
     type: rankType,
     date_type: dateType,
@@ -1817,7 +1895,7 @@ async function fetchImageBytes({
       return targetUrl.toLowerCase().split("?")[0].endsWith(".jpg");
     }
   })();
-  if (isJpg) {
+  if (isJpg || priority === 0) {
     return fetchBytes();
   }
 
