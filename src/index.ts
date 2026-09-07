@@ -277,7 +277,7 @@ async function savePlatformValue(platform: string) {
 }
 
 async function resolveApiBase() {
-  const rawCached = await cache.get(API_BASE_CACHE_KEY, DEFAULT_API_BASE);
+  const rawCached = await cache.get(API_BASE_CACHE_KEY, null);
   const cachedValue = String(unwrapStoredValue(rawCached) ?? "").trim();
   if (isValidApiBase(cachedValue)) {
     console.log(`[api-base] hit cache apiBase="${cachedValue}"`);
@@ -286,7 +286,7 @@ async function resolveApiBase() {
 
   let choice = "";
   try {
-    const rawChoiceFromCache = await cache.get(API_DOMAIN_CONFIG_KEY, DEFAULT_API_DOMAIN_CHOICE);
+    const rawChoiceFromCache = await cache.get(API_DOMAIN_CONFIG_KEY, null);
     choice = String(unwrapStoredValue(rawChoiceFromCache) ?? "").trim();
   } catch {
     // ignore cache read errors
@@ -309,20 +309,24 @@ async function resolveApiBase() {
 }
 
 async function resolvePlatformValue() {
-  const rawCached = await cache.get(PLATFORM_CACHE_KEY, DEFAULT_PLATFORM_VALUE);
-  const cachedValue = String(unwrapStoredValue(rawCached) ?? "");
-  if (PLATFORM_OPTIONS.some((item) => item.value === cachedValue)) {
-    return cachedValue;
+  const rawCached = await cache.get(PLATFORM_CACHE_KEY, null);
+  if (rawCached != null) {
+    const cachedValue = String(unwrapStoredValue(rawCached) ?? "");
+    if (PLATFORM_OPTIONS.some((item) => item.value === cachedValue)) {
+      return cachedValue;
+    }
   }
 
   let platform = "";
   try {
-    const rawFromCache = await cache.get(PLATFORM_CONFIG_KEY, DEFAULT_PLATFORM_VALUE);
-    platform = String(unwrapStoredValue(rawFromCache) ?? "");
+    const rawFromCache = await cache.get(PLATFORM_CONFIG_KEY, null);
+    if (rawFromCache != null) {
+      platform = String(unwrapStoredValue(rawFromCache) ?? "");
+    }
   } catch {
     // ignore cache read errors
   }
-  if (!PLATFORM_OPTIONS.some((item) => item.value === platform)) {
+  if (!platform || !PLATFORM_OPTIONS.some((item) => item.value === platform)) {
     const rawFromConfig = await pluginConfig.load(PLATFORM_CONFIG_KEY, DEFAULT_PLATFORM_VALUE);
     platform = String(unwrapStoredValue(rawFromConfig) ?? "");
   }
